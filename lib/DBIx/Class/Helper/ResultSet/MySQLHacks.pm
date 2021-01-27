@@ -115,24 +115,13 @@ sub multi_table_update {
     my $sql_maker = $storage->sql_maker;
 
     ### NOTE: Much of this is based on deep-analysis of DBIx::Class::Storage::DBI, especially
-    ### $result->update / $result->single_single and how that eventually ends up to their
-    ### respective $storage->_execute calls.
+    ### $result->update / $result->single and how that eventually ends up to their respective
+    ### $storage->_execute calls.
 
     ### XXX: This FROM/WHERE piece might be replaced with a less private-heavy count_rs->query
     ### hack, similar to multi_table_delete.  However, the SET is going to be going
     ### *in-between* the FROM/WHERE piece, so binds and SQL insertion might make things more
     ### difficult.  If this code breaks hard, we might have to revert to that model.
-    ###
-    ### Here is a simpler version:
-    ###
-    ### my ($set_sql, $set_bind) = $self->_prep_for_execute(
-    ###     'update', $rsrc, $update_columns, $rsrc->_storage_ident_condition
-    ### );
-    ###
-    ### my ($from_where_sql, $from_where_bind);
-    ### ($from_where_sql, @$count_bind) = @${ $self->count_rs->as_query };
-    ### $from_where_sql =~ s/^\(\s*(.+)\s*\)$/$1/s;
-    ### $from_where_sql =~ s/SELECT COUNT[()*\s]+(?= FROM)//;
 
     # Collect attrs for various calls
     my $resolved_attrs = { %{$self->_resolved_attrs} };
