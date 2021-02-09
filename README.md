@@ -1,0 +1,101 @@
+# NAME
+
+DBIx::Class::Helper::ResultSet::MySQLHacks - Useful MySQL-specific operations for DBIx::Class
+
+# VERSION
+
+version v0.0.7
+
+# SYNOPSIS
+
+    # Your base resultset
+    package MySchema::ResultSet;
+
+    use strict;
+    use warnings;
+
+    use parent 'DBIx::Class::ResultSet';
+
+    __PACKAGE__->load_components('Helper::ResultSet::MySQLHacks');
+
+    # In other resultset classes
+    package MySchema::ResultSet::Bar;
+
+    use strict;
+    use warnings;
+
+    use parent 'MySchema::ResultSet';
+
+    # In code using the resultset
+    $rs->multi_table_delete(qw< rel1 rel2 >);
+    $rs->multi_table_update(\%values);
+
+# DESCRIPTION
+
+This MySQL-specific ResultSet helper contains a series of hacks for various SQL
+operations that only work for MySQL.  These hacks are exactly that, so it's possible that
+the SQL manipulation isn't as clean as it should be.
+
+# METHODS
+
+## multi\_table\_delete
+
+    my $underlying_storage_rv = $rs->multi_table_delete;  # deletes rows from the current table
+    my $underlying_storage_rv = $rs->multi_table_delete(qw< rel1 rel2 >);
+
+Runs a delete using the multiple table syntax, which supports join operations.  This is
+useful in cases with a joined ResultSet that require rows to be deleted, and using
+["delete\_all" in DBIx::Class::ResultSet](https://metacpan.org/pod/DBIx%3A%3AClass%3A%3AResultSet#delete_all) would be too slow.
+
+Without arguments, it will delete rows from the current table, ie: ["current\_source\_alias" in DBIx::Class::ResultSet](https://metacpan.org/pod/DBIx%3A%3AClass%3A%3AResultSet#current_source_alias).
+Otherwise, it can take a list of **relationships** to delete from.  These must be existing
+relationship aliases tied to the joins, not table names.
+
+This method works by taking a count ResultSet, removing the `SELECT COUNT(*)`
+portion, and splicing in the `DELETE @aliases` part.
+
+The return value is a pass through of what the underlying storage backend returned, and
+may vary.  See ["execute" in DBI](https://metacpan.org/pod/DBI#execute) for the most common case.
+
+**NOTE:** This method will not delete from views, per MySQL limitations.
+
+## multi\_table\_update
+
+    my $underlying_storage_rv = $rs->multi_table_update(\%values);
+
+Runs a update using the multiple table syntax, which supports join operations.  This is
+useful in cases with a joined ResultSet that require rows to be updated, and using
+["update\_all" in DBIx::Class::ResultSet](https://metacpan.org/pod/DBIx%3A%3AClass%3A%3AResultSet#update_all) would be too slow.
+
+A values hashref is required.  It's highly recommended that the keys are named as
+`alias.column` pairs, since multiple tables are involved.
+
+This method works by acquiring the `FROM`, `SET`, and `WHERE` clauses separately and
+merging them back into a proper multi-table `UPDATE` query.
+
+The return value is a pass through of what the underlying storage backend returned, and
+may vary.  See ["execute" in DBI](https://metacpan.org/pod/DBI#execute) for the most common case.
+
+## dbh\_execute
+
+    my $rv                = $rs->dbh_execute($sql, $bind);
+    my ($rv, $sth, @bind) = $rs->dbh_execute($sql, $bind);
+
+Sends any SQL statement to the `$dbh` via ["dbh\_do" in DBIx::Class::Storage::DBI](https://metacpan.org/pod/DBIx%3A%3AClass%3A%3AStorage%3A%3ADBI#dbh_do) while
+running the usual query loggers and re-connection protections that come with DBIC.
+
+This runs code similar to [DBIx::Class::Storage::DBI](https://metacpan.org/pod/DBIx%3A%3AClass%3A%3AStorage%3A%3ADBI)'s `_execute` method, except that
+it takes SQL and binds as input.  Like `_dbh_execute` and `_execute`, it returns
+different outputs, depending on the context.
+
+# AUTHOR
+
+Grant Street Group <developers@grantstreet.com>
+
+# COPYRIGHT AND LICENSE
+
+This software is Copyright (c) 2021 by Grant Street Group.
+
+This is free software, licensed under:
+
+    The Artistic License 2.0 (GPL Compatible)
