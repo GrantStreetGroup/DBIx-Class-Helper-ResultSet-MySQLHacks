@@ -4,7 +4,7 @@ DBIx::Class::Helper::ResultSet::MySQLHacks - Useful MySQL-specific operations fo
 
 # VERSION
 
-version v0.0.7
+version v1.0.0
 
 # SYNOPSIS
 
